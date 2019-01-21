@@ -18,7 +18,7 @@ import com.example.hdh.hangleking.Class.InGame.UI.*;
 import com.example.hdh.hangleking.Class.InGame.Word.*;
 import com.example.hdh.hangleking.Class.InGame.Word.Brown.Word_Loan;
 import com.example.hdh.hangleking.Class.InGame.Word.Brown.Word_Native;
-import com.example.hdh.hangleking.R;
+import com.example.hdh.hangleking.Class.InGame.Word.Gray.Gray_Word;
 
 import java.util.LinkedList;
 
@@ -27,8 +27,8 @@ public class GameView extends View {
     private int LIFE = 7;               //목숨
     private int SCORE = 0;               //점수
 
-    public int WORD_CREATE_CYCLE = 1500;                                    //단어생성주기
-    private int WORD_BROKEN_CYCLE = 2000;                                    //단어삭제주기
+    public int WORD_CREATE_CYCLE = 900;                                    //단어생성주기
+    private int WORD_BROKEN_CYCLE = 3000;                                    //단어삭제주기
 
     private int width, height; // View의 크기
 
@@ -39,6 +39,8 @@ public class GameView extends View {
 
     private LinkedList<Word_Native> m_WordNative;              //고유어 LinkedList 선언
     private LinkedList<Word_Loan> m_WordLoan;                  //외래어 LinkedList 선언
+
+    private LinkedList<Gray_Word> m_grayWord;                  //난이도기왓장 LinkedList 선언
 
     private Paint paint;                                      //글씨를 써주기 위함
 
@@ -69,11 +71,12 @@ public class GameView extends View {
 
         m_WordNative = new LinkedList<>(); // 고유어 LinkedList 생성
         m_WordLoan = new LinkedList<>(); // 외래어 LinkedList 생성
+        m_grayWord  = new LinkedList<>(); // 난이도기왓장 LinkedList 생성
 
         wordLocation = new Word_Location(getContext());      // 단어위치 객체 생성
 
-        m_Handler.sendEmptyMessageDelayed(0, 10); // Handler 호출
-        wordCreate_Handler.sendEmptyMessageDelayed(0, WORD_CREATE_CYCLE); // Handler 호출
+        m_Handler.sendEmptyMessage(0); // Handler 호출
+        m_Handler.sendEmptyMessage(1); // Handler 호출
     }
 
     //----------------------------------
@@ -97,6 +100,14 @@ public class GameView extends View {
         for (Word_Loan tLoan_Word : m_WordLoan) {
             canvas.drawBitmap(tLoan_Word.LoanWord, tLoan_Word.getM_X(), tLoan_Word.getM_Y(), paint);
         }
+
+        //----------------------------------
+        // 난이도기왓장 그리기
+        //----------------------------------
+        for (Gray_Word tGray_Word : m_grayWord) {
+            canvas.drawBitmap(tGray_Word.gray_Word, tGray_Word.getM_X(), tGray_Word.getM_Y(), paint);
+        }
+
 
         //----------------------------------
         // 망치 그리기
@@ -129,6 +140,15 @@ public class GameView extends View {
             if (m_WordLoan.get(i).isDead()) {
                 wordLocation.Location_Check_False(m_WordLoan.get(i).getM_X(), m_WordLoan.get(i).getM_Y());
                 m_WordLoan.remove(i);
+                return;
+            }
+        }
+
+        //난이도 기왓장 삭제
+        for (int i = m_grayWord.size() - 1; i >= 0; i--) {
+            if (m_grayWord.get(i).isDead()) {
+                wordLocation.Location_Check_False(m_grayWord.get(i).getM_X(), m_grayWord.get(i).getM_Y());
+                m_grayWord.remove(i);
                 return;
             }
         }
@@ -169,6 +189,20 @@ public class GameView extends View {
                 LIFE--;
             }
         }
+
+        //난이도기왓장 녹이기
+        for (int i = m_grayWord.size() - 1; i >= 0; i--) {
+            if (thisTime - m_grayWord.get(i).getChangeLastTime() >= 1500){
+                m_grayWord.get(i).Change_Gray_Word();
+                m_grayWord.get(i).setChangeLastTime(System.currentTimeMillis ());
+            }
+
+            if (thisTime - m_grayWord.get(i).getLastTime() >= 4500) {
+                m_grayWord.get(i).setDead(true);
+                Delete_Object();
+                LIFE--;
+            }
+        }
     }
 
     //------------------------------------
@@ -190,31 +224,39 @@ public class GameView extends View {
 
     public Handler m_Handler = new Handler() {
         public void handleMessage(Message msg) {
-            invalidate(); // View를 다시 그림
-            m_Handler.removeMessages(0);
-            m_Handler.sendEmptyMessageDelayed(0, 10);
+            switch (msg.what){
+                case 0:
+                    invalidate(); // View를 다시 그림
+                    m_Handler.removeMessages(0);
+                    m_Handler.sendEmptyMessageDelayed(0, 10);
+                    break;
+                case 1:
+                    int randChoice = (int) (Math.random() * 100) + 1;
+                    randChoice = 99;
+                    wordLocation.rollXY();                                      //단어 X,Y좌표 롤링
+                    int wordLocation_X = wordLocation.getFaceValueX();              //랜덤함수 값 저장
+                    int wordLocation_Y = wordLocation.getFaceValueY();              //랜덤함수 값 저장
+
+                    if ( randChoice <= 80) {
+                        int wordChoice = (int) (Math.random() * 100) + 1;
+
+                        if (wordChoice >= 50) {                                             //0이면 고유어 , 1이면 외래어생성
+                            m_WordNative.add(new Word_Native(wordLocation_X, wordLocation_Y, getContext()));
+                            Log.d("고유어 기왓장", "X : " + wordLocation_X + " Y : " + wordLocation_Y + "생성");
+                        } else {
+                            m_WordLoan.add(new Word_Loan(wordLocation_X, wordLocation_Y, getContext()));
+                            Log.d("외래어 기왓장", "X : " + wordLocation_X + " Y : " + wordLocation_Y + "생성");
+                        }
+
+                    } else {
+                        m_grayWord.add(new Gray_Word(wordLocation_X, wordLocation_Y, getContext()));
+                        Log.d("난이도 기왓장", "X : " + wordLocation_X + " Y : " + wordLocation_Y + "생성");
+                    }
+
+                    m_Handler.removeMessages(1);
+                    m_Handler.sendEmptyMessageDelayed(1, WORD_CREATE_CYCLE);
+                    break;
+            }
         }
     }; // Handler
-
-
-    //단어생성 핸들러
-    public Handler wordCreate_Handler = new Handler() {
-        public void handleMessage(Message msg) {
-            int randChoice = (int) (Math.random() * 100);
-            wordLocation.rollXY();                                      //단어 X,Y좌표 롤링
-            int wordLocation_X = wordLocation.getFaceValueX();              //랜덤함수 값 저장
-            int wordLocation_Y = wordLocation.getFaceValueY();              //랜덤함수 값 저장
-
-            if (randChoice >= 50) {                                             //0이면 고유어 , 1이면 외래어생성
-                m_WordNative.add(new Word_Native(wordLocation_X, wordLocation_Y, getContext()));
-                Log.d("고유어 기왓장", "X : " + wordLocation_X + " Y : " + wordLocation_Y + "생성");
-            } else {
-                m_WordLoan.add(new Word_Loan(wordLocation_X, wordLocation_Y, getContext()));
-                Log.d("외래어 기왓장", "X : " + wordLocation_X + " Y : " + wordLocation_Y + "생성");
-            }
-
-            wordCreate_Handler.removeMessages(0);
-            wordCreate_Handler.sendEmptyMessageDelayed(0, WORD_CREATE_CYCLE);
-        }
-    };
 }

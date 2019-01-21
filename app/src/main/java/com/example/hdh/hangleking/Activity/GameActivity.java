@@ -19,13 +19,13 @@ public class GameActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         gameView.m_Handler.removeMessages(0);
-        gameView.wordCreate_Handler.removeMessages(0);
+        gameView.m_Handler.removeMessages(1);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         gameView.m_Handler.sendEmptyMessageDelayed(0, 10); // Handler 호출
-        gameView.wordCreate_Handler.sendEmptyMessageDelayed(0, gameView.WORD_CREATE_CYCLE); // Handler 호출
+        gameView.m_Handler.sendEmptyMessageDelayed(1, gameView.WORD_CREATE_CYCLE); // Handler 호출
     }
 }
