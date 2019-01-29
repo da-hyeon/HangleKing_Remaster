@@ -26,7 +26,7 @@ public class Gray_Word extends Obejct_Attribue {
             R.drawable.gray_loan_3,
             R.drawable.gray_loan_4,
             R.drawable.gray_loan_5
-            
+
     };
 
     private int worldChoice;
